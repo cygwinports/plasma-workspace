@@ -1,0 +1,150 @@
+inherit kf5
+
+NAME="plasma-workspace"
+VERSION=5.8.5
+RELEASE=1
+CATEGORY="KDE"
+SUMMARY="KDE Plasma Workspaces"
+DESCRIPTION="Plasma Desktop offers a beautiful looking desktop that takes
+complete advantage of modern computing technology. Through the use of visual
+effects and scalable graphics, the desktop experience is not only smooth but
+also pleasant to the eye. The looks of Plasma Desktop not only provide beauty,
+they are also used to support and improve your computer activities effectively,
+without being distracting."
+
+SRC_URI+=" kde.ico"
+PATCH_URI="
+	5.8.3-startkde-qtpaths.patch
+	5.8.3-system-dbusmenu.patch
+	5.8.3-wayland-optional.patch
+	5.8.3-xsession-icon.patch
+"
+
+PKG_NAMES="${NAME} libkworkspace5_5 libkworkspace5-devel
+	   libtaskmanager6 libtaskmanager-devel
+	   libweather_ion7 libweather_ion-devel"
+plasma_workspace_OBSOLETES="kde-base-artwork"
+plasma_workspace_REQUIRES="cygutils dbus-x11 run xinit plasma-desktop khotkeys"
+plasma_workspace_REQUIRES+=" kscreen kwin dolphin khelpcenter kmenuedit konsole"
+plasma_workspace_REQUIRES+=" kwrite systemsettings plasma-integration qt5-devel-tools qt5-quickcontrols"
+plasma_workspace_REQUIRES+=" ${NAME}-wallpapers kde-cli-tools kdeplasma-addons kf5-kded"
+plasma_workspace_CONTENTS="
+	etc/X11/xinit/Xclients.d/Xclients.plasma.sh
+	etc/postinstall/plasma-workspace.sh
+	etc/preremove/plasma-workspace.sh
+	etc/xdg/autostart/klipper.desktop
+	etc/xdg/autostart/krunner.desktop
+	etc/xdg/autostart/plasmashell.desktop
+	etc/xdg/autostart/xembedsniproxy.desktop
+	etc/xdg/plasmoids.knsrc
+	etc/xdg/taskmanagerrulesrc
+	etc/xdg/wallpaper.knsrc
+	usr/bin/cygkdeinit5_kcminit.dll
+	usr/bin/cygkdeinit5_kcminit_startup.dll
+	usr/bin/cygkdeinit5_klipper.dll
+	usr/bin/cygkdeinit5_ksmserver.dll
+	usr/bin/cygkdeinit5_kuiserver5.dll
+	usr/bin/kcheckrunning.exe
+	usr/bin/kcminit.exe
+	usr/bin/kcminit_startup.exe
+	usr/bin/kdostartupconfig5.exe
+	usr/bin/klipper.exe
+	usr/bin/krunner.exe
+	usr/bin/ksmserver.exe
+	usr/bin/ksplashqml.exe
+	usr/bin/kstartupconfig5.exe
+	usr/bin/kuiserver5.exe
+	usr/bin/plasmashell.exe
+	usr/bin/plasmawindowed.exe
+	usr/bin/startkde
+	usr/bin/startplasmacompositor
+	usr/bin/systemmonitor.exe
+	usr/bin/xembedsniproxy.exe
+	usr/lib/qt5/plugins/kcm_*
+	usr/lib/qt5/plugins/kf5/kded/
+	usr/lib/qt5/plugins/kf5/kio/
+	usr/lib/qt5/plugins/kio_*
+	usr/lib/qt5/plugins/kpackage/
+	usr/lib/qt5/plugins/krunner_*
+	usr/lib/qt5/plugins/phonon_platform/
+	usr/lib/qt5/plugins/plasma*
+	usr/lib/qt5/qml/org/kde/holidayeventshelperplugin/
+	usr/lib/qt5/qml/org/kde/plasma/
+	usr/lib/qt5/qml/org/kde/taskmanager/
+	usr/libexec/drkonqi.exe
+	usr/libexec/ksmserver-logout-greeter.exe
+	usr/libexec/ksyncdbusenv.exe
+	usr/libexec/startplasma
+	usr/share/applications/org.kde.klipper.desktop
+	usr/share/applications/plasma-windowed.desktop
+	usr/share/config.kcfg/freespacenotifier.kcfg
+	usr/share/dbus-1/services/kf5_org.kde.kuiserver.service
+	usr/share/dbus-1/services/org.kde.krunner.service
+	usr/share/desktop-directories/kf5-*
+	usr/share/doc/HTML/*/klipper/
+	usr/share/doc/${NAME}/
+	usr/share/drkonqi/
+	usr/share/kdevappwizard/*
+	usr/share/kio_desktop/*
+	usr/share/knotifications5/*
+	usr/share/kservices5/*
+	usr/share/kservicetypes5/*
+	usr/share/ksmserver/
+	usr/share/ksplash/
+	usr/share/kstyle/
+	usr/share/locale/*/LC_MESSAGES/*
+	usr/share/pixmaps/xwin/kde.ico
+	usr/share/plasma/
+	usr/share/solid/actions/*
+	usr/share/xsessions/plasma.desktop
+"
+libkworkspace5_5_CATEGORY="Libs"
+libkworkspace5_5_SUMMARY="KDE Plasma workspaces library"
+libkworkspace5_5_CONTENTS="usr/bin/cygkworkspace5-5.dll"
+libkworkspace5_devel_CATEGORY="Libs"
+libkworkspace5_devel_SUMMARY=${libkworkspace5_5_SUMMARY}
+libkworkspace5_devel_CONTENTS="
+	usr/include/kworkspace5/
+	usr/lib/cmake/KRunnerAppDBusInterface/
+	usr/lib/cmake/KSMServerDBusInterface/
+	usr/lib/cmake/LibKWorkspace/
+	usr/lib/libkworkspace5.dll.a
+	usr/share/dbus-1/interfaces/com.canonical.AppMenu.Registrar.xml
+	usr/share/dbus-1/interfaces/org.kde.KSMServerInterface.xml
+	usr/share/dbus-1/interfaces/org.kde.KSplash.xml
+	usr/share/dbus-1/interfaces/org.kde.PlasmaShell.xml
+	usr/share/dbus-1/interfaces/org.kde.kappmenu.xml
+	usr/share/dbus-1/interfaces/org.kde.krunner.App.xml
+"
+libtaskmanager6_CATEGORY="Libs"
+libtaskmanager6_SUMMARY="KDE Plasma task manager library"
+libtaskmanager6_CONTENTS="usr/bin/cygtaskmanager-6.dll"
+libtaskmanager_devel_CATEGORY="Libs"
+libtaskmanager_devel_SUMMARY=${libtaskmanager6_SUMMARY}
+libtaskmanager_devel_CONTENTS="
+	usr/include/taskmanager/
+	usr/lib/cmake/LibTaskManager/
+	usr/lib/libtaskmanager.dll.a
+"
+libweather_ion7_CATEGORY="Libs"
+libweather_ion7_SUMMARY="KDE Plasma weather library"
+libweather_ion7_CONTENTS="usr/bin/cygweather_ion-7.dll"
+libweather_ion_devel_CATEGORY="Libs"
+libweather_ion_devel_SUMMARY=${libweather_ion7_SUMMARY}
+libweather_ion_devel_CONTENTS="
+	usr/include/plasma/weather/
+	usr/lib/libweather_ion.dll.a
+"
+PKG_IGNORE="
+	usr/share/doc/HTML/*/kcontrol/screenlocker/
+	usr/share/sddm/
+	usr/share/wayland-sessions/
+"
+
+src_install() {
+	cd ${B}
+	kf5_install
+
+	insinto /usr/share/pixmaps/xwin
+	doins ${S}/kde.ico
+}

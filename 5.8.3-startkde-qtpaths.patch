@@ -1,0 +1,28 @@
+--- origsrc/plasma-workspace-5.8.3/startkde/startkde.cmake	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/startkde/startkde.cmake	2016-11-28 12:15:22.508727000 -0600
+@@ -20,14 +20,14 @@ unset DYLD_FORCE_FLAT_NAMESPACE
+ # in case we have been started with full pathname spec without being in PATH
+ bindir=`echo "$0" | sed -n 's,^\(/.*\)/[^/][^/]*$,\1,p'`
+ if [ -n "$bindir" ]; then
+-  qbindir=`qtpaths --binaries-dir`
++  qbindir=`qtpaths-qt5 --binaries-dir`
+   qdbus=$qbindir/qdbus
+   case $PATH in
+     $bindir|$bindir:*|*:$bindir|*:$bindir:*) ;;
+     *) PATH=$bindir:$PATH; export PATH;;
+   esac
+ else
+-  qdbus=qdbus
++  qdbus=qdbus-qt5
+ fi
+ 
+ # Check if a KDE session already is running and whether it's possible to connect to X
+@@ -206,7 +206,7 @@ fi
+ # better use the Autostart folder.
+ 
+ # TODO: Use GenericConfigLocation once we depend on Qt 5.4
+-scriptpath=`qtpaths --paths ConfigLocation | tr ':' '\n' | sed 's,$,/plasma-workspace,g'`
++scriptpath=`qtpaths-qt5 --paths ConfigLocation | tr ':' '\n' | sed 's,$,/plasma-workspace,g'`
+ 
+ # Add /env/ to the directory to locate the scripts to be sourced
+ for prefix in `echo $scriptpath`; do

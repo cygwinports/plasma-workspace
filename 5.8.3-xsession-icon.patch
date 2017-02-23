@@ -1,0 +1,10 @@
+--- origsrc/plasma-workspace-5.8.3/plasma.desktop.cmake	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/plasma.desktop.cmake	2016-11-28 11:33:45.343897100 -0600
+@@ -3,6 +3,7 @@ Encoding=UTF-8
+ Type=XSession
+ Exec=${CMAKE_INSTALL_FULL_BINDIR}/startkde
+ TryExec=${CMAKE_INSTALL_FULL_BINDIR}/startkde
++Icon=kde
+ DesktopNames=KDE
+ Name=Plasma
+ Name[ar]=بلازما

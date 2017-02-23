@@ -1,0 +1,22 @@
+--- origsrc/plasma-workspace-5.8.3/dataengines/statusnotifieritem/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/dataengines/statusnotifieritem/CMakeLists.txt	2016-11-28 03:24:28.441965200 -0600
+@@ -8,11 +8,6 @@ set(statusnotifieritem_engine_SRCS
+     statusnotifieritemservice.cpp
+     statusnotifieritemjob.cpp
+     systemtraytypes.cpp
+-
+-    libdbusmenuqt/dbusmenuimporter.cpp
+-    libdbusmenuqt/dbusmenushortcut_p.cpp
+-    libdbusmenuqt/dbusmenutypes_p.cpp
+-    libdbusmenuqt/utils.cpp
+ )
+ 
+ set(statusnotifierwatcher_xml ${KNOTIFICATIONS_DBUS_INTERFACES_DIR}/kf5_org.kde.StatusNotifierWatcher.xml)
+@@ -30,6 +25,7 @@ qt5_add_dbus_interface(statusnotifierite
+ 
+ add_library(plasma_engine_statusnotifieritem MODULE ${statusnotifieritem_engine_SRCS})
+ target_link_libraries(plasma_engine_statusnotifieritem
++    dbusmenu-qt5
+     Qt5::DBus
+     KF5::Service
+     KF5::Plasma

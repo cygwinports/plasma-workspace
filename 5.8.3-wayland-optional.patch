@@ -1,0 +1,944 @@
+--- origsrc/plasma-workspace-5.8.3/CMakeLists.txt	2016-11-01 07:25:10.000000000 -0500
++++ src/plasma-workspace-5.8.3/CMakeLists.txt	2017-02-05 17:03:14.445993600 -0600
+@@ -14,13 +14,18 @@ set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH}
+ find_package(KF5 ${KF5_MIN_VERSION} REQUIRED COMPONENTS
+                     Plasma DocTools Runner JsEmbed NotifyConfig Su NewStuff Wallet KCMUtils
+                     IdleTime Declarative TextWidgets KDELibs4Support Crash GlobalAccel
+-                    DBusAddons Wayland)
++                    DBusAddons)
+ find_package(KF5NetworkManagerQt ${KF5_MIN_VERSION})
+ set_package_properties(KF5NetworkManagerQt PROPERTIES DESCRIPTION "Qt wrapper for NetworkManager API"
+                        TYPE OPTIONAL
+                        PURPOSE "Needed by geolocation data engine."
+                       )
+ find_package(KF5XmlRpcClient REQUIRED)
++find_package(KF5Wayland ${KF5_MIN_VERSION})
++set_package_properties(KF5Wayland PROPERTIES DESCRIPTION "KDE Wayland APIs"
++                       TYPE OPTIONAL
++                       PURPOSE "Needed for Wayland support."
++                      )
+ 
+ # WARNING PlasmaQuick provides unversioned CMake config
+ find_package(KF5 REQUIRED COMPONENTS PlasmaQuick)
+@@ -31,8 +36,8 @@ find_package(KF5 5.1 REQUIRED COMPONENTS
+ find_package(KF5TextEditor)
+ find_package(KWinDBusInterface CONFIG REQUIRED)
+ 
+-find_package(KScreenLocker REQUIRED)
+-find_package(ScreenSaverDBusInterface CONFIG REQUIRED)
++find_package(KScreenLocker)
++find_package(ScreenSaverDBusInterface)
+ find_package(KF5Holidays)
+ set_package_properties(KF5Holidays PROPERTIES DESCRIPTION "Holidays provider for Plasma calendar"
+                        TYPE OPTIONAL
+--- origsrc/plasma-workspace-5.8.3/components/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/components/CMakeLists.txt	2016-11-28 03:28:50.858869900 -0600
+@@ -3,4 +3,4 @@ add_definitions(-DTRANSLATION_DOMAIN=\"p
+ install(DIRECTORY workspace/ DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/plasma/workspace/components)
+ add_subdirectory(shellprivate)
+ add_subdirectory(keyboardlayout)
+-add_subdirectory(sessionsprivate)
++#add_subdirectory(sessionsprivate)
+--- origsrc/plasma-workspace-5.8.3/components/sessionsprivate/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/components/sessionsprivate/CMakeLists.txt	2016-11-27 23:52:49.257531500 -0600
+@@ -3,7 +3,9 @@ set(sessionsprivateplugin_SRCS
+     sessionsprivateplugin.cpp
+ )
+ 
++if(SCREENSAVER_DBUS_INTERFACE)
+ qt5_add_dbus_interface(sessionsprivateplugin_SRCS ${SCREENSAVER_DBUS_INTERFACE} screensaver_interface)
++endif()
+ 
+ kconfig_add_kcfg_files(sessionsprivateplugin_SRCS kscreensaversettings.kcfgc)
+ 
+--- origsrc/plasma-workspace-5.8.3/containmentactions/contextmenu/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/containmentactions/contextmenu/CMakeLists.txt	2016-11-27 23:17:59.541567200 -0600
+@@ -9,7 +9,9 @@ set(contextmenu_SRCS
+ set(krunner_xml ${plasma-workspace_SOURCE_DIR}/krunner/dbus/org.kde.krunner.App.xml)
+ qt5_add_dbus_interface(contextmenu_SRCS ${krunner_xml} krunner_interface)
+ 
++if(SCREENSAVER_DBUS_INTERFACE)
+ qt5_add_dbus_interface(contextmenu_SRCS ${SCREENSAVER_DBUS_INTERFACE} screensaver_interface)
++endif()
+ 
+ 
+ add_library(plasma_containmentactions_contextmenu MODULE ${contextmenu_SRCS})
+--- origsrc/plasma-workspace-5.8.3/containmentactions/contextmenu/menu.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/containmentactions/contextmenu/menu.cpp	2016-11-28 03:15:52.682909800 -0600
+@@ -37,7 +37,9 @@
+ 
+ #include "kworkspace.h"
+ #include "krunner_interface.h"
++#if 0
+ #include "screensaver_interface.h"
++#endif
+ 
+ #ifdef Q_OS_WIN
+ #define _WIN32_WINNT 0x0500 // require NT 5.0 (win 2k pro)
+@@ -209,6 +211,7 @@ void ContextMenu::lockScreen()
+         return;
+     }
+ 
++#if 0
+ #ifndef Q_OS_WIN
+     QString interface(QStringLiteral("org.freedesktop.ScreenSaver"));
+     org::freedesktop::ScreenSaver screensaver(interface, QStringLiteral("/ScreenSaver"),
+@@ -219,6 +222,7 @@ void ContextMenu::lockScreen()
+ #else
+     LockWorkStation();
+ #endif // !Q_OS_WIN
++#endif
+ }
+ 
+ void ContextMenu::startLogout()
+--- origsrc/plasma-workspace-5.8.3/krunner/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/krunner/CMakeLists.txt	2016-11-28 01:14:00.333851500 -0600
+@@ -21,9 +21,12 @@ target_link_libraries(krunner
+     KF5::GlobalAccel
+     KF5::DBusAddons
+     KF5::Crash
+-    KF5::WaylandClient
+     KF5::QuickAddons
+ )
++if(KF5Wayland_FOUND)
++target_link_libraries(krunner KF5::WaylandClient)
++endif()
++
+ target_compile_definitions(krunner PRIVATE -DPROJECT_VERSION="${PROJECT_VERSION}")
+ 
+ install(TARGETS krunner ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+--- origsrc/plasma-workspace-5.8.3/krunner/view.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/krunner/view.cpp	2016-11-28 01:17:14.727406100 -0600
+@@ -42,10 +42,12 @@
+ #include <KPackage/Package>
+ #include <KPackage/PackageLoader>
+ 
++#if 0
+ #include <KWayland/Client/connection_thread.h>
+ #include <KWayland/Client/registry.h>
+ #include <KWayland/Client/surface.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ 
+ #include "appadaptor.h"
+ 
+@@ -56,7 +58,9 @@ View::View(QWindow *)
+       m_plasmaShell(nullptr),
+       m_plasmaShellSurface(nullptr)
+ {
++#if 0
+     initWayland();
++#endif
+     setClearBeforeRendering(true);
+     setColor(QColor(Qt::transparent));
+     setFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+@@ -142,6 +146,7 @@ View::~View()
+ {
+ }
+ 
++#if 0
+ void View::initWayland()
+ {
+     if (!KWindowSystem::isPlatformWayland()) {
+@@ -166,6 +171,7 @@ void View::initWayland()
+     registry->setup();
+     connection->roundtrip();
+ }
++#endif
+ 
+ void View::objectIncubated()
+ {
+@@ -229,6 +235,7 @@ bool View::event(QEvent *event)
+         KWindowSystem::setState(winId(), NET::SkipTaskbar | NET::SkipPager);
+     }
+ 
++#if 0
+     if (m_plasmaShell && event->type() == QEvent::PlatformSurface) {
+         if (auto e = dynamic_cast<QPlatformSurfaceEvent*>(event)) {
+             using namespace KWayland::Client;
+@@ -251,6 +258,7 @@ bool View::event(QEvent *event)
+         QMoveEvent *me = static_cast<QMoveEvent *>(event);
+         m_plasmaShellSurface->setPosition(me->pos());
+     }
++#endif
+ 
+     return retval;
+ }
+--- origsrc/plasma-workspace-5.8.3/ksmserver/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksmserver/CMakeLists.txt	2016-11-28 01:25:41.602093000 -0600
+@@ -57,7 +57,6 @@ ecm_configure_package_config_file(KSMSer
+     INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+ 
+ target_link_libraries(kdeinit_ksmserver
+-    PW::KScreenLocker
+     PW::KWorkspace
+     KF5::XmlGui
+     KF5::GlobalAccel
+@@ -76,6 +75,10 @@ target_link_libraries(kdeinit_ksmserver
+     Qt5::Concurrent
+ )
+ 
++if(KScreenLocker_FOUND)
++target_link_libraries(kdeinit_ksmserver PW::KScreenLocker)
++endif()
++
+ install(TARGETS kdeinit_ksmserver ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+ 
+ install(TARGETS ksmserver ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+--- origsrc/plasma-workspace-5.8.3/ksmserver/logout-greeter/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksmserver/logout-greeter/CMakeLists.txt	2016-11-28 01:30:56.669451500 -0600
+@@ -11,9 +11,12 @@ target_link_libraries(ksmserver-logout-g
+     KF5::Package
+     KF5::QuickAddons
+     KF5::KDELibs4Support # Solid/PowerManagement
+-    KF5::WaylandClient
+     ${X11_LIBRARIES}
+ )
++if(KF5Wayland_FOUND)
++target_link_libraries(ksmserver-logout-greeter KF5::WaylandClient)
++endif()
++
+ install(TARGETS ksmserver-logout-greeter DESTINATION ${KDE_INSTALL_LIBEXECDIR})
+ 
+ add_subdirectory(tests)
+--- origsrc/plasma-workspace-5.8.3/ksmserver/logout-greeter/main.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksmserver/logout-greeter/main.cpp	2016-11-28 01:29:28.734605600 -0600
+@@ -31,9 +31,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE
+ 
+ #include <KWindowSystem>
+ 
++#if 0
+ #include <KWayland/Client/connection_thread.h>
+ #include <KWayland/Client/registry.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ 
+ #include <unistd.h>
+ 
+@@ -78,6 +80,7 @@ Greeter::~Greeter()
+ 
+ void Greeter::setupWaylandIntegration()
+ {
++#if 0
+     if (!KWindowSystem::isPlatformWayland()) {
+         return;
+     }
+@@ -95,6 +98,7 @@ void Greeter::setupWaylandIntegration()
+     );
+     registry->setup();
+     connection->roundtrip();
++#endif
+ }
+ 
+ void Greeter::init()
+--- origsrc/plasma-workspace-5.8.3/ksmserver/server.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksmserver/server.cpp	2016-11-28 01:18:36.028865600 -0600
+@@ -83,7 +83,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE
+ #include <kprocess.h>
+ #include <kshell.h>
+ 
++#if 0
+ #include <KScreenLocker/KsldApp>
++#endif
+ 
+ #include <kdisplaymanager.h>
+ #include <QX11Info>
+@@ -608,12 +610,14 @@ KSMServer::KSMServer( const QString& win
+   , sessionGroup( QStringLiteral( "" ) )
+   , logoutEffectWidget( NULL )
+ {
++#if 0
+     if (!flags.testFlag(InitFlag::NoLockScreen)) {
+         ScreenLocker::KSldApp::self()->initialize();
+         if (flags.testFlag(InitFlag::ImmediateLockScreen)) {
+             ScreenLocker::KSldApp::self()->lock(ScreenLocker::EstablishLock::Immediate);
+         }
+     }
++#endif
+ 
+     new KSMServerInterfaceAdaptor( this );
+     QDBusConnection::sessionBus().registerObject(QStringLiteral("/KSMServer"), this);
+--- origsrc/plasma-workspace-5.8.3/ksmserver/shutdowndlg.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksmserver/shutdowndlg.cpp	2016-11-28 01:30:21.935234700 -0600
+@@ -69,8 +69,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE
+ 
+ #include <config-workspace.h>
+ 
++#if 0
+ #include <KWayland/Client/surface.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ 
+ Q_DECLARE_METATYPE(Solid::PowerManagement::SleepState)
+ 
+@@ -233,6 +235,7 @@ bool KSMShutdownDlg::event(QEvent *e)
+ 
+ void KSMShutdownDlg::setupWaylandIntegration()
+ {
++#if 0
+     if (m_shellSurface) {
+         // already setup
+         return;
+@@ -249,6 +252,7 @@ void KSMShutdownDlg::setupWaylandIntegra
+     // TODO: set a proper window type to indicate to KWin that this is the logout dialog
+     // maybe we need a dedicated type for it?
+     m_shellSurface->setPosition(geometry().topLeft());
++#endif
+ }
+ 
+ void KSMShutdownDlg::slotLogout()
+--- origsrc/plasma-workspace-5.8.3/ksplash/ksplashqml/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksplash/ksplashqml/CMakeLists.txt	2016-11-28 01:03:18.848317400 -0600
+@@ -14,10 +14,13 @@ target_link_libraries(ksplashqml
+     KF5::ConfigCore
+     KF5::Package
+     KF5::QuickAddons
+-    KF5::WaylandClient
+     KF5::WindowSystem
+    )
+ 
++if(KF5Wayland_FOUND)
++target_link_libraries(ksplashqml KF5::WaylandClient)
++endif()
++
+ install(TARGETS ksplashqml ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+ install(FILES org.kde.KSplash.xml DESTINATION ${KDE_INSTALL_DBUSINTERFACEDIR})
+ 
+--- origsrc/plasma-workspace-5.8.3/ksplash/ksplashqml/splashapp.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksplash/ksplashqml/splashapp.cpp	2016-11-28 00:03:21.205521500 -0600
+@@ -31,9 +31,11 @@
+ #include <QCommandLineParser>
+ 
+ #include <KWindowSystem>
++#if 0
+ #include <KWayland/Client/connection_thread.h>
+ #include <KWayland/Client/registry.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ 
+ #define TEST_STEP_INTERVAL 2000
+ 
+@@ -65,7 +67,9 @@ SplashApp::SplashApp(int &argc, char **
+     m_testing = parser.isSet(QStringLiteral("test"));
+     m_window = parser.isSet(QStringLiteral("window"));
+ 
++#if 0
+     setupWaylandIntegration();
++#endif
+ 
+     foreach(QScreen* screen, screens())
+         adoptScreen(screen);
+@@ -151,6 +155,7 @@ void SplashApp::adoptScreen(QScreen* scr
+     });
+ }
+ 
++#if 0
+ void SplashApp::setupWaylandIntegration()
+ {
+     if (!KWindowSystem::isPlatformWayland()) {
+@@ -171,3 +176,4 @@ void SplashApp::setupWaylandIntegration(
+     registry->setup();
+     connection->roundtrip();
+ }
++#endif
+--- origsrc/plasma-workspace-5.8.3/ksplash/ksplashqml/splashwindow.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/ksplash/ksplashqml/splashwindow.cpp	2016-11-28 01:02:39.585400200 -0600
+@@ -34,8 +34,10 @@
+ #include <KPackage/Package>
+ #include <KPackage/PackageLoader>
+ 
++#if 0
+ #include <KWayland/Client/surface.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ #include <KWindowSystem>
+ 
+ SplashWindow::SplashWindow(bool testing, bool window)
+@@ -86,7 +88,9 @@ bool SplashWindow::event(QEvent *e)
+         if (auto pe = dynamic_cast<QPlatformSurfaceEvent*>(e)) {
+             switch (pe->surfaceEventType()) {
+             case QPlatformSurfaceEvent::SurfaceCreated:
++#if 0
+                 setupWaylandIntegration();
++#endif
+                 break;
+             case QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed:
+                 delete m_shellSurface;
+@@ -136,11 +140,14 @@ void SplashWindow::setGeometry(const QRe
+         setSource(QUrl::fromLocalFile(package.filePath("splashmainscript")));
+     }
+ 
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setPosition(geometry().topLeft());
+     }
++#endif
+ }
+ 
++#if 0
+ void SplashWindow::setupWaylandIntegration()
+ {
+     if (m_shellSurface) {
+@@ -164,3 +171,4 @@ void SplashWindow::setupWaylandIntegrati
+         m_shellSurface->setPosition(geometry().topLeft());
+     }
+ }
++#endif
+--- origsrc/plasma-workspace-5.8.3/libtaskmanager/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/libtaskmanager/CMakeLists.txt	2016-11-28 01:40:48.283062400 -0600
+@@ -14,7 +14,6 @@ set(taskmanager_LIB_SRCS
+     tasksmodel.cpp
+     tasktools.cpp
+     virtualdesktopinfo.cpp
+-    waylandtasksmodel.cpp
+     windowtasksmodel.cpp
+ )
+ 
+@@ -25,6 +24,13 @@ if (X11_FOUND)
+     )
+ endif()
+ 
++if (KF5Wayland_FOUND)
++    set(taskmanager_LIB_SRCS
++        ${taskmanager_LIB_SRCS}
++        waylandtasksmodel.cpp
++    )
++endif()
++
+ add_library(taskmanager ${taskmanager_LIB_SRCS})
+ add_library(PW::LibTaskManager ALIAS taskmanager)
+ 
+@@ -45,7 +51,6 @@ target_link_libraries(taskmanager
+         KF5::KIOCore
+         KF5::KIOWidgets
+         KF5::ProcessCore
+-        KF5::WaylandClient
+         KF5::WindowSystem
+ )
+ 
+@@ -56,6 +61,12 @@ if (X11_FOUND)
+             KF5::IconThemes)
+ endif()
+ 
++if (KF5Wayland_FOUND)
++    target_link_libraries(taskmanager
++        PRIVATE
++            KF5::WaylandClient)
++endif()
++
+ set_target_properties(taskmanager PROPERTIES
+                       VERSION ${PROJECT_VERSION}
+                       SOVERSION 6
+@@ -77,7 +88,6 @@ install(FILES
+     tasksmodel.h
+     tasktools.h
+     virtualdesktopinfo.h
+-    waylandtasksmodel.h
+     windowtasksmodel.h
+     ${CMAKE_CURRENT_BINARY_DIR}/taskmanager_export.h
+     DESTINATION ${KDE_INSTALL_INCLUDEDIR}/taskmanager COMPONENT Devel
+@@ -89,6 +99,13 @@ if (X11_FOUND)
+         DESTINATION ${KDE_INSTALL_INCLUDEDIR}/taskmanager COMPONENT Devel
+     )
+ endif()
++
++if (KF5Wayland_FOUND)
++    install(FILES
++        waylandtasksmodel.h
++        DESTINATION ${KDE_INSTALL_INCLUDEDIR}/taskmanager COMPONENT Devel
++    )
++endif()
+ 
+ write_basic_config_version_file(${CMAKE_CURRENT_BINARY_DIR}/LibTaskManagerConfigVersion.cmake VERSION "${PROJECT_VERSION}" COMPATIBILITY AnyNewerVersion)
+ 
+--- origsrc/plasma-workspace-5.8.3/libtaskmanager/windowtasksmodel.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/libtaskmanager/windowtasksmodel.cpp	2016-11-28 01:42:15.024069900 -0600
+@@ -22,7 +22,9 @@ License along with this library.  If not
+ 
+ #include <config-X11.h>
+ 
++#if 0
+ #include "waylandtasksmodel.h"
++#endif
+ #if HAVE_X11
+ #include "xwindowtasksmodel.h"
+ #endif
+@@ -69,9 +71,11 @@ WindowTasksModel::Private::~Private()
+ 
+ void WindowTasksModel::Private::initSourceTasksModel()
+ {
++#if 0
+     if (!sourceTasksModel && KWindowSystem::isPlatformWayland()) {
+         sourceTasksModel = new WaylandTasksModel();
+     }
++#endif
+ 
+ #if HAVE_X11
+     if (!sourceTasksModel && KWindowSystem::isPlatformX11()) {
+--- origsrc/plasma-workspace-5.8.3/runners/sessions/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/runners/sessions/CMakeLists.txt	2016-11-27 23:51:29.923428800 -0600
+@@ -4,7 +4,9 @@ set(krunner_sessions_SRCS
+     sessionrunner.cpp
+ )
+ 
++if(SCREENSAVER_DBUS_INTERFACE)
+ qt5_add_dbus_interface(krunner_sessions_SRCS ${SCREENSAVER_DBUS_INTERFACE} screensaver_interface)
++endif()
+ 
+ add_library(krunner_sessions MODULE ${krunner_sessions_SRCS})
+ target_link_libraries(krunner_sessions Qt5::Widgets Qt5::DBus KF5::Runner KF5::I18n PW::KWorkspace)
+--- origsrc/plasma-workspace-5.8.3/runners/sessions/sessionrunner.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/runners/sessions/sessionrunner.cpp	2016-11-28 02:12:04.480408100 -0600
+@@ -26,7 +26,9 @@
+ 
+ #include "kworkspace.h"
+ 
++#if 0
+ #include "screensaver_interface.h"
++#endif
+ 
+ K_EXPORT_PLASMA_RUNNER(calculatorrunner, SessionRunner)
+ 
+@@ -269,12 +271,14 @@ void SessionRunner::run(const Plasma::Ru
+ 
+ void SessionRunner::lock()
+ {
++#if 0
+     QString interface(QStringLiteral("org.freedesktop.ScreenSaver"));
+     org::freedesktop::ScreenSaver screensaver(interface, QStringLiteral("/ScreenSaver"),
+                                               QDBusConnection::sessionBus());
+     if (screensaver.isValid()) {
+         screensaver.Lock();
+     }
++#endif
+ }
+ 
+ #include "sessionrunner.moc"
+--- origsrc/plasma-workspace-5.8.3/shell/CMakeLists.txt	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/CMakeLists.txt	2016-11-28 03:11:28.323604600 -0600
+@@ -59,7 +59,6 @@ set (plasma_shell_SRCS
+     shellmanager.cpp
+     standaloneappcorona
+     osd.cpp
+-    waylanddialogfilter.cpp
+     coronatesthelper.cpp
+     debug.cpp
+     screenpool.cpp
+@@ -94,7 +93,6 @@ target_link_libraries(plasmashell
+  KF5::QuickAddons
+  KF5::XmlGui
+  KF5::Package
+- KF5::WaylandClient
+ )
+ target_include_directories(plasmashell PRIVATE "${CMAKE_BINARY_DIR}")
+ target_compile_definitions(plasmashell PRIVATE -DPROJECT_VERSION="${PROJECT_VERSION}")
+--- origsrc/plasma-workspace-5.8.3/shell/desktopview.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/desktopview.cpp	2016-11-28 02:20:18.553308500 -0600
+@@ -33,8 +33,10 @@
+ 
+ #include <KPackage/Package>
+ 
++#if 0
+ #include <KWayland/Client/plasmashell.h>
+ #include <KWayland/Client/surface.h>
++#endif
+ 
+ DesktopView::DesktopView(Plasma::Corona *corona, QScreen *targetScreen)
+     : PlasmaQuick::ContainmentView(corona, 0),
+@@ -159,37 +161,45 @@ void DesktopView::ensureWindowType()
+         setFlags(Qt::Window);
+         KWindowSystem::setType(winId(), NET::Normal);
+         KWindowSystem::clearState(winId(), NET::FullScreen);
++#if 0
+         if (m_shellSurface) {
+             m_shellSurface->setRole(KWayland::Client::PlasmaShellSurface::Role::Normal);
+             m_shellSurface->setSkipTaskbar(false);
+         }
++#endif
+ 
+     } else if (m_windowType == Desktop) {
+         setFlags(Qt::Window | Qt::FramelessWindowHint);
+         KWindowSystem::setType(winId(), NET::Desktop);
+         KWindowSystem::setState(winId(), NET::KeepBelow);
++#if 0
+         if (m_shellSurface) {
+             m_shellSurface->setRole(KWayland::Client::PlasmaShellSurface::Role::Desktop);
+             m_shellSurface->setSkipTaskbar(true);
+         }
++#endif
+ 
+     } else if (m_windowType == WindowedDesktop) {
+         KWindowSystem::setType(winId(), NET::Normal);
+         KWindowSystem::clearState(winId(), NET::FullScreen);
+         setFlags(Qt::FramelessWindowHint | flags());
++#if 0
+         if (m_shellSurface) {
+             m_shellSurface->setRole(KWayland::Client::PlasmaShellSurface::Role::Normal);
+             m_shellSurface->setSkipTaskbar(false);
+         }
++#endif
+ 
+     } else if (m_windowType == FullScreen) {
+         setFlags(Qt::Window);
+         KWindowSystem::setType(winId(), NET::Normal);
+         KWindowSystem::setState(winId(), NET::FullScreen);
++#if 0
+         if (m_shellSurface) {
+             m_shellSurface->setRole(KWayland::Client::PlasmaShellSurface::Role::Normal);
+             m_shellSurface->setSkipTaskbar(false);
+         }
++#endif
+     }
+ }
+ 
+@@ -212,6 +222,7 @@ bool DesktopView::event(QEvent *e)
+                 KWindowSystem::setShowingDesktop(false);
+             }
+         }
++#if 0
+     } else if (e->type() == QEvent::PlatformSurface) {
+         if (auto pe = dynamic_cast<QPlatformSurfaceEvent*>(e)) {
+             switch (pe->surfaceEventType()) {
+@@ -224,6 +235,7 @@ bool DesktopView::event(QEvent *e)
+                 break;
+             }
+         }
++#endif
+     }
+ 
+     return PlasmaQuick::ContainmentView::event(e);
+@@ -284,9 +296,11 @@ void DesktopView::screenGeometryChanged(
+     setGeometry(geo);
+     setMinimumSize(geo.size());
+     setMaximumSize(geo.size());
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setPosition(geo.topLeft());
+     }
++#endif
+ }
+ 
+ 
+@@ -298,6 +312,7 @@ void DesktopView::coronaPackageChanged(c
+ 
+ void DesktopView::setupWaylandIntegration()
+ {
++#if 0
+     if (m_shellSurface) {
+         // already setup
+         return;
+@@ -315,4 +330,5 @@ void DesktopView::setupWaylandIntegratio
+         m_shellSurface = interface->createSurface(s, this);
+         m_shellSurface->setPosition(m_screenToFollow->geometry().topLeft());
+     }
++#endif
+ }
+--- origsrc/plasma-workspace-5.8.3/shell/panelconfigview.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/panelconfigview.cpp	2016-11-28 02:40:57.548796900 -0600
+@@ -38,8 +38,10 @@
+ #include <Plasma/Containment>
+ #include <Plasma/PluginLoader>
+ 
++#if 0
+ #include <KWayland/Client/plasmashell.h>
+ #include <KWayland/Client/surface.h>
++#endif
+ 
+ //////////////////////////////PanelConfigView
+ PanelConfigView::PanelConfigView(Plasma::Containment *containment, PanelView *panelView, QWindow *parent)
+@@ -239,13 +241,16 @@ void PanelConfigView::focusOutEvent(QFoc
+ 
+ void PanelConfigView::moveEvent(QMoveEvent *ev)
+ {
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setPosition(ev->pos());
+     }
++#endif
+ }
+ 
+ bool PanelConfigView::event(QEvent *e)
+ {
++#if 0
+     if (e->type() == QEvent::PlatformSurface) {
+         if (auto pe = dynamic_cast<QPlatformSurfaceEvent*>(e)) {
+             switch (pe->surfaceEventType()) {
+@@ -274,6 +279,7 @@ bool PanelConfigView::event(QEvent *e)
+             }
+         }
+     }
++#endif
+ 
+     return PlasmaQuick::ConfigView::event(e);
+ }
+--- origsrc/plasma-workspace-5.8.3/shell/panelshadows.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/panelshadows.cpp	2016-11-28 03:08:32.892372400 -0600
+@@ -32,11 +32,13 @@
+ #include <fixx11h.h>
+ #endif
+ 
++#if 0
+ #include <KWayland/Client/connection_thread.h>
+ #include <KWayland/Client/registry.h>
+ #include <KWayland/Client/shadow.h>
+ #include <KWayland/Client/shm_pool.h>
+ #include <KWayland/Client/surface.h>
++#endif
+ 
+ #include <qdebug.h>
+ 
+@@ -100,6 +102,7 @@ public:
+     bool m_isX11;
+ #endif
+ 
++#if 0
+     struct Wayland {
+         KWayland::Client::ShadowManager *manager = nullptr;
+         KWayland::Client::ShmPool *shmPool = nullptr;
+@@ -107,6 +110,7 @@ public:
+         QList<KWayland::Client::Buffer::Ptr> shadowBuffers;
+     };
+     Wayland m_wayland;
++#endif
+ 
+     QHash<Plasma::FrameSvg::EnabledBorders, QVector<unsigned long> > data;
+     QHash<const QWindow *, Plasma::FrameSvg::EnabledBorders> m_windows;
+@@ -299,11 +303,13 @@ void PanelShadows::Private::setupPixmaps
+     m_emptyVerticalPix = initEmptyPixmap(QSize(1, q->elementSize(QStringLiteral("shadow-left")).height()));
+     m_emptyHorizontalPix = initEmptyPixmap(QSize(q->elementSize(QStringLiteral("shadow-top")).width(), 1));
+ 
++#if 0
+     if (m_wayland.shmPool) {
+         for (auto it = m_shadowPixmaps.constBegin(); it != m_shadowPixmaps.constEnd(); ++it) {
+             m_wayland.shadowBuffers << m_wayland.shmPool->createBuffer(it->toImage());
+         }
+     }
++#endif
+ }
+ 
+ 
+@@ -502,7 +508,9 @@ void PanelShadows::Private::clearPixmaps
+ 
+ void PanelShadows::Private::freeWaylandBuffers()
+ {
++#if 0
+     m_wayland.shadowBuffers.clear();
++#endif
+ }
+ 
+ void PanelShadows::Private::updateShadow(const QWindow *window, Plasma::FrameSvg::EnabledBorders enabledBorders)
+@@ -512,9 +520,11 @@ void PanelShadows::Private::updateShadow
+         updateShadowX11(window, enabledBorders);
+     }
+ #endif
++#if 0
+     if (m_wayland.manager) {
+         updateShadowWayland(window, enabledBorders);
+     }
++#endif
+ }
+ 
+ void PanelShadows::Private::updateShadowX11(const QWindow *window, Plasma::FrameSvg::EnabledBorders enabledBorders)
+@@ -539,6 +549,7 @@ void PanelShadows::Private::updateShadow
+ 
+ void PanelShadows::Private::updateShadowWayland(const QWindow *window, Plasma::FrameSvg::EnabledBorders enabledBorders)
+ {
++#if 0
+     if (!m_wayland.shmPool) {
+         return;
+     }
+@@ -637,6 +648,7 @@ void PanelShadows::Private::updateShadow
+     shadow->setOffsets(margins);
+     shadow->commit();
+     surface->commit(KWayland::Client::Surface::CommitFlag::None);
++#endif
+ }
+ 
+ void PanelShadows::Private::clearShadow(const QWindow *window)
+@@ -650,9 +662,11 @@ void PanelShadows::Private::clearShadow(
+         clearShadowX11(window);
+     }
+ #endif
++#if 0
+     if (m_wayland.manager) {
+         clearShadowWayland(window);
+     }
++#endif
+ }
+ 
+ void PanelShadows::Private::clearShadowX11(const QWindow* window)
+@@ -666,12 +680,14 @@ void PanelShadows::Private::clearShadowX
+ 
+ void PanelShadows::Private::clearShadowWayland(const QWindow *window)
+ {
++#if 0
+     KWayland::Client::Surface *surface = KWayland::Client::Surface::fromWindow(const_cast<QWindow*>(window));
+     if (!surface) {
+         return;
+     }
+     m_wayland.manager->removeShadow(surface);
+     surface->commit(KWayland::Client::Surface::CommitFlag::None);
++#endif
+ }
+ 
+ bool PanelShadows::enabled() const
+@@ -681,6 +697,7 @@ bool PanelShadows::enabled() const
+ 
+ void PanelShadows::Private::setupWaylandIntegration()
+ {
++#if 0
+     if (!KWindowSystem::isPlatformWayland()) {
+         return;
+     }
+@@ -705,6 +722,7 @@ void PanelShadows::Private::setupWayland
+     );
+     registry->setup();
+     connection->roundtrip();
++#endif
+ }
+ 
+ #include "moc_panelshadows_p.cpp"
+--- origsrc/plasma-workspace-5.8.3/shell/panelview.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/panelview.cpp	2016-11-28 02:22:27.734368500 -0600
+@@ -39,8 +39,10 @@
+ #include <Plasma/Containment>
+ #include <Plasma/Package>
+ 
++#if 0
+ #include <KWayland/Client/plasmashell.h>
+ #include <KWayland/Client/surface.h>
++#endif
+ 
+ #if HAVE_X11
+ #include <xcb/xcb.h>
+@@ -325,6 +327,7 @@ void PanelView::setVisibilityMode(PanelV
+ 
+ void PanelView::visibilityModeToWayland()
+ {
++#if 0
+     if (!m_shellSurface) {
+         return;
+     }
+@@ -347,6 +350,7 @@ void PanelView::visibilityModeToWayland(
+         return;
+     }
+     m_shellSurface->setPanelBehavior(behavior);
++#endif
+ }
+ 
+ PanelView::VisibilityMode PanelView::visibilityMode() const
+@@ -387,9 +391,11 @@ void PanelView::positionPanel()
+     const QPoint pos = geometryByDistance(m_distance).topLeft();
+     setPosition(pos);
+ 
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setPosition(pos);
+     }
++#endif
+ 
+     KWindowEffects::slideWindow(winId(), slideLocation, -1);
+ }
+@@ -636,9 +642,11 @@ void PanelView::resizeEvent(QResizeEvent
+     //don't setGeometry() to make really sure we aren't doing a resize loop
+     const QPoint pos = geometryByDistance(m_distance).topLeft();
+     setPosition(pos);
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setPosition(pos);
+     }
++#endif
+     m_strutsTimer.start(STRUTSTIMERDELAY);
+     PlasmaQuick::ContainmentView::resizeEvent(ev);
+ }
+@@ -657,10 +665,12 @@ void PanelView::integrateScreen()
+     themeChanged();
+     KWindowSystem::setOnAllDesktops(winId(), true);
+     KWindowSystem::setType(winId(), NET::Dock);
++#if 0
+     if (m_shellSurface) {
+         m_shellSurface->setRole(KWayland::Client::PlasmaShellSurface::Role::Panel);
+         m_shellSurface->setSkipTaskbar(true);
+     }
++#endif
+     setVisibilityMode(m_visibilityMode);
+ 
+     if (containment()) {
+@@ -820,6 +830,7 @@ bool PanelView::event(QEvent *e)
+             }
+             break;
+         }
++#if 0
+         case QEvent::PlatformSurface:
+             if (auto pe = dynamic_cast<QPlatformSurfaceEvent*>(e)) {
+                 switch (pe->surfaceEventType()) {
+@@ -834,6 +845,7 @@ bool PanelView::event(QEvent *e)
+                 }
+             }
+             break;
++#endif
+         default:
+             break;
+     }
+@@ -1089,6 +1101,7 @@ void PanelView::screenDestroyed(QObject*
+ 
+ void PanelView::setupWaylandIntegration()
+ {
++#if 0
+     if (m_shellSurface) {
+         // already setup
+         return;
+@@ -1105,6 +1118,7 @@ void PanelView::setupWaylandIntegration(
+         }
+         m_shellSurface = interface->createSurface(s, this);
+     }
++#endif
+ }
+ 
+ bool PanelView::edgeActivated() const
+--- origsrc/plasma-workspace-5.8.3/shell/shellcorona.cpp	2016-11-01 07:23:51.000000000 -0500
++++ src/plasma-workspace-5.8.3/shell/shellcorona.cpp	2016-11-28 03:12:38.684638200 -0600
+@@ -51,9 +51,11 @@
+ 
+ #include <KPackage/PackageLoader>
+ 
++#if 0
+ #include <KWayland/Client/connection_thread.h>
+ #include <KWayland/Client/registry.h>
+ #include <KWayland/Client/plasmashell.h>
++#endif
+ 
+ #include "config-ktexteditor.h" // HAVE_KTEXTEDITOR
+ 
+@@ -218,6 +220,7 @@ ShellCorona::~ShellCorona()
+ 
+ bool ShellCorona::eventFilter(QObject *watched, QEvent *event)
+ {
++#if 0
+     if (event->type() == QEvent::PlatformSurface &&
+         watched->inherits("PlasmaQuick::Dialog")) {
+         QPlatformSurfaceEvent *se = static_cast<QPlatformSurfaceEvent *>(event);
+@@ -227,6 +230,7 @@ bool ShellCorona::eventFilter(QObject *w
+             }
+         }
+     }
++#endif
+ 
+     return QObject::eventFilter(watched, event);
+ }
+@@ -1920,6 +1924,7 @@ void ShellCorona::showOpenGLNotCompatibl
+ 
+ void ShellCorona::setupWaylandIntegration()
+ {
++#if 0
+     if (!KWindowSystem::isPlatformWayland()) {
+         return;
+     }
+@@ -1936,6 +1941,7 @@ void ShellCorona::setupWaylandIntegratio
+         }
+     );
+     registry->setup();
++#endif
+ }
+ 
+ KWayland::Client::PlasmaShell *ShellCorona::waylandPlasmaShellInterface() const
