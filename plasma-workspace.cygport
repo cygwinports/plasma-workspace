@@ -28,6 +28,7 @@ plasma_workspace_REQUIRES="cygutils dbus-x11 run xinit plasma-desktop khotkeys"
 plasma_workspace_REQUIRES+=" kscreen kwin dolphin khelpcenter kmenuedit konsole"
 plasma_workspace_REQUIRES+=" kwrite systemsettings plasma-integration qt5-devel-tools qt5-quickcontrols"
 plasma_workspace_REQUIRES+=" ${NAME}-wallpapers kde-cli-tools kdeplasma-addons kf5-kded"
+plasma_workspace_REQUIRES+=" iso-codes"
 plasma_workspace_CONTENTS="
 	etc/X11/xinit/Xclients.d/Xclients.plasma.sh
 	etc/postinstall/plasma-workspace.sh
