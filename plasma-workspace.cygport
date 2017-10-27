@@ -1,7 +1,7 @@
 inherit kf5
 
 NAME="plasma-workspace"
-VERSION=5.8.5
+VERSION=5.8.8
 RELEASE=1
 CATEGORY="KDE"
 SUMMARY="KDE Plasma Workspaces"
